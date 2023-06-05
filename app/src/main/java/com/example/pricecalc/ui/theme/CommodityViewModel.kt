@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -24,86 +23,70 @@ class CommodityViewModel : ViewModel() {
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-    private val quantity = _uiState.value.quantity
-    private val price = _uiState.value.price
 
     private fun updateTotalPrice() {
         _uiState.value = _uiState.value.copy(
-            total = price.toInt().times(quantity).toString()
+            total = uiState.value.price.toInt().times(uiState.value.quantity).toString()
         )
     }
 
     fun handleUiEvent(event: CommodityUiEvent) {
         when (event) {
             is CommodityUiEvent.OnAddPrice -> {
-//                if (price > 100) {
-//                    viewModelScope.launch {
-//                        _uiEvent.send(
-//                            UiEvent.ShowToastMessage("Price > 100")
-//                        )
-//                    }
-//                    return
-//                }
-//                _uiState.update {
-//                    _uiState.value.copy(
-//                        price = price.plus(PRICE_INCREASE)
-//                    )
-//                }
+                if (uiState.value.quantity.equals(0)){
+                    _uiState.value = _uiState.value.copy(
+                        quantity = QUANTITY_INCREASE
+                    )
+                }
+                if(uiState.value.price >= 100){
+                    viewModelScope.launch {
+                        _uiEvent.send(UiEvent.ShowToastMessage("Cant Add price >= 100"))
+                    }
+                    return
+                }
                 _uiState.value = _uiState.value.copy(
-                    price = price.plus(PRICE_INCREASE)
+                    price = uiState.value.price.plus(PRICE_INCREASE)
                 )
                 updateTotalPrice()
-                UiEvent.ShowToastMessage(event.msg)
             }
 
             is CommodityUiEvent.OnAddQuantity -> {
-                if (quantity > 10) {
+                if(uiState.value.quantity >= 10){
                     viewModelScope.launch {
-                        UiEvent.ShowToastMessage("Cant Add")
+                        _uiEvent.send(UiEvent.ShowToastMessage("Cant Add quantity >= 10"))
                     }
                     return
                 }
-                _uiState.update {
-                    _uiState.value.copy(
-                        quantity = quantity + QUANTITY_INCREASE
-                    )
-                }
-                    UiEvent.ShowToastMessage(event.msg)
-                    updateTotalPrice()
+                _uiState.value = _uiState.value.copy(
+                    quantity = uiState.value.quantity.plus(QUANTITY_INCREASE)
+                )
+                updateTotalPrice()
             }
 
             is CommodityUiEvent.OnReducePrice -> {
-                if (price <= 0) {
+                if(uiState.value.price <= 0){
                     viewModelScope.launch {
-                        _uiEvent.send(
-                            UiEvent.ShowToastMessage("Price <= 0")
-                        )
+                        _uiEvent.send(UiEvent.ShowToastMessage("Cant Reduce price <= 0"))
                     }
                     return
                 }
-                _uiState.update {
-                    _uiState.value.copy(
-                        price = price - PRICE_INCREASE
-                    )
-                }
-                    updateTotalPrice()
-                    UiEvent.ShowToastMessage(event.msg)
+                _uiState.value = _uiState.value.copy(
+                    price = uiState.value.price.minus(PRICE_INCREASE)
+                )
+                updateTotalPrice()
             }
 
             is CommodityUiEvent.OnReduceQuantity -> {
-                if (quantity < 0) {
+                if(uiState.value.quantity <= 0){
                     viewModelScope.launch {
-                        UiEvent.ShowToastMessage("Cant Reduce")
+                        _uiEvent.send(UiEvent.ShowToastMessage("Cant Reduce quantity <= 0"))
                     }
                     return
                 }
-                _uiState.update {
-                    _uiState.value.copy(
-                        quantity = quantity - QUANTITY_INCREASE
-                    )
-                }
-                    UiEvent.ShowToastMessage(event.msg)
-                    updateTotalPrice()
+                _uiState.value = _uiState.value.copy(
+                    quantity = uiState.value.quantity.minus(QUANTITY_INCREASE)
+                )
+                updateTotalPrice()
             }
         }
     }
